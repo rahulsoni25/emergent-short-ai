@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# App specifics
+/tmp-render/
+/public/renders/
+/artifacts/
+/test_output.mp4
+/test_ffmpeg.js
