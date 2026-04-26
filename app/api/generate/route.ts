@@ -30,23 +30,70 @@ export async function POST(request: Request) {
     const script = scripts[Math.floor(Math.random() * scripts.length)];
     const fullText = `${script.hook} ${script.body} ${script.cta}`;
 
-    // Generate TTS URL (split into 200 char chunks automatically)
-    const audioUrls = googleTTS.getAllAudioUrls(fullText, {
-      lang: 'en',
-      slow: false,
-      host: 'https://translate.google.com',
-    });
+    async function generateVoiceboxAudio(text: string) {
+      const vbUrl = 'http://localhost:17493';
+      try {
+        const health = await fetch(`${vbUrl}/health`, { signal: AbortSignal.timeout(2000) });
+        if (!health.ok) return null;
 
-    // Fetch and combine audio chunks into base64
-    let audioBuffer = Buffer.alloc(0);
-    for (const urlInfo of audioUrls) {
-      const audioRes = await fetch(urlInfo.url);
-      if (audioRes.ok) {
+        let profileId = null;
+        const profilesRes = await fetch(`${vbUrl}/profiles`);
+        const profiles = await profilesRes.json();
+        const existing = profiles.find((p: any) => p.name === 'ShortsVoice');
+        
+        if (existing) {
+          profileId = existing.id;
+        } else {
+          const createRes = await fetch(`${vbUrl}/profiles`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'ShortsVoice', voice_type: 'preset', preset_engine: 'kokoro', preset_voice_id: 'af_nova' })
+          });
+          const newProfile = await createRes.json();
+          profileId = newProfile.id;
+        }
+
+        if (!profileId) return null;
+
+        const audioRes = await fetch(`${vbUrl}/generate/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile_id: profileId, text: text, engine: 'kokoro' })
+        });
+
+        if (!audioRes.ok) return null;
         const arrayBuffer = await audioRes.arrayBuffer();
-        audioBuffer = Buffer.concat([audioBuffer, Buffer.from(arrayBuffer)]);
+        if (arrayBuffer.byteLength < 1000) return null; // Likely JSON error
+        
+        return Buffer.from(arrayBuffer).toString('base64');
+      } catch (error) {
+        console.log('Voicebox unavailable or error, falling back to Google TTS...');
+        return null;
       }
     }
-    const audioBase64 = audioBuffer.toString('base64');
+
+    let audioBase64 = await generateVoiceboxAudio(fullText);
+    let audioSource = 'Voicebox (Kokoro)';
+
+    if (!audioBase64) {
+      // Fallback to Google TTS
+      const audioUrls = googleTTS.getAllAudioUrls(fullText, {
+        lang: 'en',
+        slow: false,
+        host: 'https://translate.google.com',
+      });
+
+      let audioBuffer = Buffer.alloc(0);
+      for (const urlInfo of audioUrls) {
+        const audioRes = await fetch(urlInfo.url);
+        if (audioRes.ok) {
+          const arrayBuffer = await audioRes.arrayBuffer();
+          audioBuffer = Buffer.concat([audioBuffer, Buffer.from(arrayBuffer)]);
+        }
+      }
+      audioBase64 = audioBuffer.toString('base64');
+      audioSource = 'Google TTS (Fallback)';
+    }
 
     // Construct Pollinations image prompts based on the script segments
     const imagePrompts = [
@@ -68,7 +115,7 @@ export async function POST(request: Request) {
       metadata: {
         engine: 'Gemini 3 Pro via Emergent',
         visuals: 'Pollinations FLUX',
-        audio: 'Google TTS',
+        audio: audioSource,
         target: 'AEO / GEO Optimized'
       }
     });
