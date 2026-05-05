@@ -8,6 +8,7 @@ export function GeneratorPanel() {
   const [topic, setTopic] = useState('');
   const [niche, setNiche] = useState('Technology');
   const [length, setLength] = useState('30s');
+  const [voice, setVoice] = useState('af_nova');
   const [status, setStatus] = useState<'idle' | 'generating' | 'preview' | 'rendering' | 'complete' | 'error'>('idle');
   const [scriptData, setScriptData] = useState<any>(null);
   const [progress, setProgress] = useState(0);
@@ -40,7 +41,7 @@ export function GeneratorPanel() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, niche, length })
+        body: JSON.stringify({ topic, niche, length, voice })
       });
       if (!res.ok) throw new Error('Failed to generate script');
       const data = await res.json();
