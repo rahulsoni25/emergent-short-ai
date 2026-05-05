@@ -65,7 +65,8 @@ export function GeneratorPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           imageUrls: scriptData.imageUrls,
-          audioBase64: scriptData.audioBase64
+          audioBase64: scriptData.audioBase64,
+          script: scriptData.script
         })
       });
       
@@ -123,14 +124,14 @@ export function GeneratorPanel() {
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Niche</label>
                     <input 
                       type="text" 
                       value={niche}
                       onChange={(e) => setNiche(e.target.value)}
-                      className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                      className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all text-sm"
                     />
                   </div>
                   <div>
@@ -138,11 +139,25 @@ export function GeneratorPanel() {
                     <select 
                       value={length}
                       onChange={(e) => setLength(e.target.value)}
-                      className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
+                      className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none text-sm"
                     >
-                      <option value="15s">15 Seconds</option>
-                      <option value="30s">30 Seconds</option>
-                      <option value="60s">60 Seconds</option>
+                      <option value="15s">15s</option>
+                      <option value="30s">30s</option>
+                      <option value="60s">60s</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Voice</label>
+                    <select 
+                      value={voice}
+                      onChange={(e) => setVoice(e.target.value)}
+                      className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none text-sm"
+                    >
+                      <option value="af_nova">Nova</option>
+                      <option value="af_sky">Sky</option>
+                      <option value="bf_isabella">Isabella</option>
+                      <option value="am_adam">Adam</option>
+                      <option value="bm_marcus">Marcus</option>
                     </select>
                   </div>
                 </div>

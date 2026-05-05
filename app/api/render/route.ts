@@ -56,11 +56,18 @@ export async function POST(request: Request) {
   const publicDir = path.join(root, 'public', 'renders');
   
   try {
-    const { imageUrls, audioBase64 } = await request.json();
+    const { imageUrls, audioBase64, script } = await request.json();
 
     if (!imageUrls || !imageUrls.length) {
       return NextResponse.json({ error: 'Image URLs are required' }, { status: 400 });
     }
+
+    const escapeFfmpegText = (text: string) => {
+      return text
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "'\\''")
+        .replace(/:/g, '\\:');
+    };
 
     // Ensure directories exist
     await fs.mkdir(tmpDir, { recursive: true });
@@ -110,17 +117,24 @@ export async function POST(request: Request) {
 
       const imageCount = normalizedScenePaths.length;
       
-      // Complex filter for crossfades
-      // Each image is 4s. Total duration = 4 * imageCount.
-      // We want to crossfade for 0.5s.
+      // Complex filter for crossfades and text overlays
       let filter = '';
       for (let i = 0; i < imageCount; i++) {
-        // Scale and pad each input first
-        filter += `[${i}:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black[v${i}];`;
+        let text = '';
+        if (script) {
+          if (i === 0) text = script.hook;
+          else if (i === 1 || i === 2) text = script.body;
+          else if (i === 3) text = script.cta;
+        }
+
+        const escapedText = escapeFfmpegText(text || '');
+        const textFilter = text ? `,drawtext=text='${escapedText}':fontcolor=white:fontsize=70:fontfile='C\\:/Windows/Fonts/arialbd.ttf':x=(w-text_w)/2:y=(h-text_h)/2+200:box=1:boxcolor=black@0.6:boxborderw=30` : '';
+
+        // Scale, pad and add text
+        filter += `[${i}:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black${textFilter}[v${i}];`;
       }
 
       // Chain xfades
-      // xfade duration 0.5s, offset for each is (4 * (i+1)) - 0.5
       let lastOutput = 'v0';
       for (let i = 1; i < imageCount; i++) {
         const nextOutput = `vx${i}`;
